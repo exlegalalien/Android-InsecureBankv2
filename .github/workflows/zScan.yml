@@ -50,7 +50,7 @@ jobs:
         # REPLACE: Zimperium Client Environment Name
           client_env: zc202
         # REPLACE: Zimperium Client ID
-          client_id: ${{ zimperium-zc202.ZSCAN_CLIENT_ID }}
+          client_id: ${{ vars.ZSCAN_CLIENT_ID }}
         # REPLACE: Zimperium Client Secret
           client_secret: ${{ secrets.ZSCAN_CLIENT_SECRET }}
         # REPLACE: The path to an .ipa or .apk
