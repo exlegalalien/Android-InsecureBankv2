@@ -18,10 +18,11 @@
 name: "Zimperium zScan"
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 permissions:
   contents: read
@@ -47,9 +48,9 @@ jobs:
         with:
 
         # REPLACE: Zimperium Client Environment Name
-          client_env: <Paste Client Env Name Here>
+          client_env: zc202
         # REPLACE: Zimperium Client ID
-          client_id: <Paste CLIENT_ID Here>
+          client_id: ${{ env.ZSCAN_CLIENT_ID }}
         # REPLACE: Zimperium Client Secret
           client_secret: ${{ secrets.ZSCAN_CLIENT_SECRET }}
         # REPLACE: The path to an .ipa or .apk
