@@ -54,7 +54,7 @@ jobs:
         # REPLACE: Zimperium Client Secret
           client_secret: ${{ secrets.ZSCAN_CLIENT_SECRET }}
         # REPLACE: The path to an .ipa or .apk
-          app_file: ./InsecureBankv2.apk
+          app_file: ./InsecureBankv2223.apk
 
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v3
