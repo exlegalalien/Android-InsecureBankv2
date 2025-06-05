@@ -41,6 +41,9 @@ jobs:
 
   #  - name: Execute gradle build
   #    run: echo "./gradlew build"
+  
+      - name: Make more apks
+        run: cp InsecureBankv2.apk InsecureBankv2-2.apk
       
       - name: Run Zimperium zScan
         uses: zimperium/zscanmarketplace@2c8a89c4ac466c821f5b933020f15cd821e4bcb5
@@ -54,7 +57,7 @@ jobs:
         # REPLACE: Zimperium Client Secret
           client_secret: ${{ secrets.ZSCAN_CLIENT_SECRET }}
         # REPLACE: The path to an .ipa or .apk
-          app_file: "InsecureBankv2/app/src/main/java/com/android/insecurebankv2/*.java"
+          app_file: "*.apk"
 
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v3
