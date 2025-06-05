@@ -43,7 +43,7 @@ jobs:
   #    run: echo "./gradlew build"
       
       - name: Run Zimperium zScan
-        uses: zimperium/zscanmarketplace@234a6ee98b012b90f490bc05cb45f6b80d340f40
+        uses: zimperium/zscanmarketplace@2844140d9d858c7226f55a4d93b4e4a64cd3eccb
         timeout-minutes: 60
         with:
 
