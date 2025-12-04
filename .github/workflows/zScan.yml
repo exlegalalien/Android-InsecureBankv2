@@ -46,7 +46,7 @@ jobs:
         run: cp InsecureBankv2.apk InsecureBankv2-2.apk
       
       - name: Run Zimperium zScan
-        uses: zimperium/zscanmarketplace@326fe1acbad823e2ce2f64d9e6872aa992c05df6
+        uses: zimperium/zscanmarketplace@7140260c6d74011ca33c9c37d5e283d4fb29b00f
         timeout-minutes: 60
         with:
 
