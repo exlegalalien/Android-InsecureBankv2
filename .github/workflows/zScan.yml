@@ -46,7 +46,7 @@ jobs:
         run: cp InsecureBankv2.apk InsecureBankv2-2.apk
       
       - name: Run Zimperium zScan
-        uses: zimperium/zscanmarketplace@7140260c6d74011ca33c9c37d5e283d4fb29b00f
+        uses: zimperium/zscanmarketplace@21542bce0d93bca401ea5ef5341f783465462caa
         timeout-minutes: 60
         with:
 
@@ -60,6 +60,6 @@ jobs:
           app_file: "*.apk"
 
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:  
           sarif_file: InsecureBankv2_zscan.sarif
