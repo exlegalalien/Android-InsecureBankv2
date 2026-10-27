@@ -2,12 +2,18 @@ package com.android.insecurebankv2;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import android.widget.Toast;
 import java.io.InputStreamReader;
+import android.os.Environment;
+import android.widget.Toast;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -112,6 +118,7 @@ public class DoTransfer extends Activity {
 	}
 
 	public class RequestDoTransferTask extends AsyncTask < String, String, String > {
+		String fromAcc, toAcc, transferAmount;
 
 		/**
 		 * constructor
@@ -121,120 +128,128 @@ public class DoTransfer extends Activity {
 			//do something
 		}
 
+		@Override
+		protected void onPreExecute() {
+			super.onPreExecute();
+			from = (EditText) findViewById(R.id.editText_from);
+			to = (EditText) findViewById(R.id.editText_to);
+			amount = (EditText) findViewById(R.id.editText_amount);
+			fromAcc = from != null && from.getText() != null ? from.getText().toString() : "";
+			toAcc = to != null && to.getText() != null ? to.getText().toString() : "";
+			transferAmount = amount != null && amount.getText() != null ? amount.getText().toString() : "";
+		}
+
 		/**
 		 * background functions
 		 */
 		@Override
 		protected String doInBackground(String...params) {
-			String str = "";
-			str = "dinesh";
-			HttpClient httpclient = new DefaultHttpClient();
-			HttpPost httppost = new HttpPost(protocol + serverip + ":" + serverport + "/dotransfer");
-			SharedPreferences settings = getSharedPreferences(MYPREFS2, 0);
-			final String username = settings.getString("EncryptedUsername", null);
-			byte[] usernameBase64Byte = Base64.decode(username, Base64.DEFAULT);
 			try {
-				usernameBase64ByteString = new String(usernameBase64Byte, "UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			final String password = settings.getString("superSecurePassword", null);
-			try {
-				//	Stores the decrypted form of the password from the locally stored shared preference file
-				passNormalized = getNormalizedPassword(password);
-			} catch (InvalidKeyException | UnsupportedEncodingException | NoSuchAlgorithmException | NoSuchPaddingException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-			List < NameValuePair > nameValuePairs = new ArrayList < NameValuePair > (5);
-			nameValuePairs.add(new BasicNameValuePair("username", usernameBase64ByteString));
-			nameValuePairs.add(new BasicNameValuePair("password", passNormalized));
-			from = (EditText) findViewById(R.id.editText_from);
-			to = (EditText) findViewById(R.id.editText_to);
-			amount = (EditText) findViewById(R.id.editText_amount);
-			nameValuePairs.add(new BasicNameValuePair("from_acc", from.getText().toString()));
-			nameValuePairs.add(new BasicNameValuePair("to_acc", to.getText().toString()));
-			nameValuePairs.add(new BasicNameValuePair("amount", amount.getText().toString()));
-			try {
-				//	The HTTP Post of the credentials plus the transaction information
-				httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			try {
-				//	Stores the HTTP response of the transaction activity
-				responseBody = httpclient.execute(httppost);
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
+				String str = "";
+				str = "dinesh";
+				SharedPreferences settings = getSharedPreferences(MYPREFS2, 0);
+				final String username = settings.getString("EncryptedUsername", null);
+				if (username == null) {
+					return null;
+				}
+				byte[] usernameBase64Byte = Base64.decode(username, Base64.DEFAULT);
+				try {
+					usernameBase64ByteString = new String(usernameBase64Byte, "UTF-8");
+				} catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+				}
+				final String password = settings.getString("superSecurePassword", null);
+				if (password != null) {
+					try {
+						passNormalized = getNormalizedPassword(password);
+					} catch (Exception e1) {
+						e1.printStackTrace();
+					}
+				}
 
-			try { in = responseBody.getEntity().getContent();
-			} catch (IllegalStateException | IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-			try {
-				result = convertStreamToString( in );
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			result = result.replace("\n", "");
-			runOnUiThread(new Runnable() {
+				URL url = new URL(protocol + serverip + ":" + serverport + "/dotransfer");
+				HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+				conn.setRequestMethod("POST");
+				conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+				conn.setDoOutput(true);
+				conn.setDoInput(true);
 
-				@Override
-				public void run() {
-					// TODO Auto-generated method stub
-					AsyncHttpTransferPost("result");
-					if (result != null) {
-						if (result.indexOf("Success") != -1) {
-                            Toasteroid.show(DoTransfer.this, "Transfer Successful!!", Toasteroid.STYLES.SUCCESS, Toasteroid.LENGTH_SHORT);
+				String postDataParams = "username=" + URLEncoder.encode(usernameBase64ByteString, "UTF-8") +
+						"&password=" + URLEncoder.encode(passNormalized != null ? passNormalized : "", "UTF-8") +
+						"&from_acc=" + URLEncoder.encode(fromAcc, "UTF-8") +
+						"&to_acc=" + URLEncoder.encode(toAcc, "UTF-8") +
+						"&amount=" + URLEncoder.encode(transferAmount, "UTF-8");
 
-                            try {
-								jsonObject = new JSONObject(result);
-								acc1 = jsonObject.getString("from");
-								acc2 = jsonObject.getString("to");
-								System.out.println("Message:" + jsonObject.getString("message") + " From:" + from.getText().toString() + " To:" + to.getText().toString() + " Amount:" + amount.getText().toString());
-								final String status = new String("\nMessage:" + "Success" + " From:" + from.getText().toString() + " To:" + to.getText().toString() + " Amount:" + amount.getText().toString() + "\n");
+				OutputStream os = conn.getOutputStream();
+				os.write(postDataParams.getBytes("UTF-8"));
+				os.flush();
+				os.close();
+
+				int responseCode = conn.getResponseCode();
+				InputStream in = (responseCode >= 400) ? conn.getErrorStream() : conn.getInputStream();
+				if (in != null) {
+					result = convertStreamToString( in );
+				} else {
+					result = "";
+				}
+
+				if (result != null) {
+					result = result.replace("\n", "");
+				} else {
+					result = "";
+				}
+
+				runOnUiThread(new Runnable() {
+
+					@Override
+					public void run() {
+						AsyncHttpTransferPost("result");
+						if (result != null) {
+							if (result.indexOf("Success") != -1) {
+								Toasteroid.show(DoTransfer.this, "Transfer Successful!!", Toasteroid.STYLES.SUCCESS, Toasteroid.LENGTH_SHORT);
+
 								try {
-									//	Captures the successful transaction status for Transaction history tracking
-									String MYFILE = Environment.getExternalStorageDirectory() + "/Statements_" + usernameBase64ByteString + ".html";
-									BufferedWriter out2 = new BufferedWriter(new FileWriter(MYFILE, true));
+									jsonObject = new JSONObject(result);
+									acc1 = jsonObject.getString("from");
+									acc2 = jsonObject.getString("to");
+									System.out.println("Message:" + jsonObject.getString("message") + " From:" + fromAcc + " To:" + toAcc + " Amount:" + transferAmount);
+									final String status = new String("\nMessage:" + "Success" + " From:" + fromAcc + " To:" + toAcc + " Amount:" + transferAmount + "\n");
+									try {
+										File file = new File(getExternalFilesDir(null), "Statements_" + usernameBase64ByteString + ".html");
+										BufferedWriter out2 = new BufferedWriter(new FileWriter(file, true));
+										out2.write(status);
+										out2.write("<hr>");
+										out2.close();
+									} catch (IOException e) {
+										e.toString();
+									}
+								} catch (JSONException e) {
+									e.printStackTrace();
+								}
+							} else {
+								Toasteroid.show(DoTransfer.this, "Transfer Failed!!", Toasteroid.STYLES.ERROR, Toasteroid.LENGTH_SHORT);
+
+								System.out.println("Message:" + "Failure" + " From:" + fromAcc + " To:" + toAcc + " Amount:" + transferAmount);
+								final String status = new String("\nMessage:" + "Failure" + " From:" + fromAcc + " To:" + toAcc + " Amount:" + transferAmount + "\n");
+								try {
+									File file = new File(getExternalFilesDir(null), "Statements_" + usernameBase64ByteString + ".html");
+									BufferedWriter out2 = new BufferedWriter(new FileWriter(file, true));
 									out2.write(status);
-                                    out2.write("<hr>");
+									out2.write("<hr>");
 									out2.close();
 								} catch (IOException e) {
 									e.toString();
 								}
-							} catch (JSONException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-						} else {
-                            Toasteroid.show(DoTransfer.this, "Transfer Failed!!", Toasteroid.STYLES.ERROR, Toasteroid.LENGTH_SHORT);
-
-
-                            System.out.println("Message:" + "Failure" + " From:" + from.getText().toString() + " To:" + to.getText().toString() + " Amount:" + amount.getText().toString());
-							final String status = new String("\nMessage:" + "Failure" + " From:" + from.getText().toString() + " To:" + to.getText().toString() + " Amount:" + amount.getText().toString() + "\n");
-							//   Captures the failed transaction status for Transaction history tracking
-							String MYFILE = Environment.getExternalStorageDirectory() + "/Statements_" + usernameBase64ByteString + ".html";
-							try {
-								BufferedWriter out2 = new BufferedWriter(new FileWriter(MYFILE, true));
-								out2.write(status);
-                                out2.write("<hr>");
-								out2.close();
-							} catch (IOException e) {
-								e.toString();
 							}
 						}
 					}
-				}
 
-			});
-			return str;
+				});
+				return str;
+			} catch (Throwable t) {
+				t.printStackTrace();
+				return null;
+			}
 		}
 
 		@Override
@@ -257,88 +272,83 @@ public class DoTransfer extends Activity {
 		 */
 		@Override
 		public String doInBackground(String...params) {
-			String str = "";
-			str = "dinesh";
-			HttpClient httpclient = new DefaultHttpClient();
-
-			HttpPost httppost = new HttpPost(protocol + serverip + ":" + serverport + "/getaccounts");
-			SharedPreferences settings = getSharedPreferences(MYPREFS2, 0);
-			final String username = settings.getString("EncryptedUsername", null);
-			byte[] usernameBase64Byte = Base64.decode(username, Base64.DEFAULT);
-
 			try {
-				usernameBase64ByteString = new String(usernameBase64Byte, "UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+				String str = "";
+				str = "dinesh";
+				SharedPreferences settings = getSharedPreferences(MYPREFS2, 0);
+				final String username = settings.getString("EncryptedUsername", null);
+				if (username == null) {
+					return null;
+				}
+				byte[] usernameBase64Byte = Base64.decode(username, Base64.DEFAULT);
 
-			final String password = settings.getString("superSecurePassword", null);
-			try {
-				//	Stores the decrypted form of the password from the locally stored shared preference file
-				passNormalized = getNormalizedPassword(password);
-			} catch (InvalidKeyException | UnsupportedEncodingException | NoSuchAlgorithmException | NoSuchPaddingException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-			// Add your data
-			List < NameValuePair > nameValuePairs = new ArrayList < NameValuePair > (2);
-			nameValuePairs.add(new BasicNameValuePair("username", usernameBase64ByteString));
-			nameValuePairs.add(new BasicNameValuePair("password", passNormalized));
-			try {
-				httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			try {
-				//	Stores the HTTP response of the get account numbers activity
-				responseBody = httpclient.execute(httppost);
-			} catch (IOException e2) {
-				// TODO Auto-generated catch block
-				e2.printStackTrace();
-			}
+				try {
+					usernameBase64ByteString = new String(usernameBase64Byte, "UTF-8");
+				} catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+				}
 
-			try { in = responseBody.getEntity().getContent();
-			} catch (IllegalStateException | IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-
-			try {
-				result = convertStreamToString( in );
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			result = result.replace("\n", "");
-			//	Parsing of the result of HTTP request
-			if (result != null) {
-				if (result.indexOf("Correct") != -1) {
+				final String password = settings.getString("superSecurePassword", null);
+				if (password != null) {
 					try {
-						jsonObject = new JSONObject(result);
-						acc1 = jsonObject.getString("from");
-						acc2 = jsonObject.getString("to");
-					} catch (JSONException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+						passNormalized = getNormalizedPassword(password);
+					} catch (Exception e1) {
+						e1.printStackTrace();
 					}
 				}
-			}
 
-			runOnUiThread(new Runnable() {
+				URL url = new URL(protocol + serverip + ":" + serverport + "/getaccounts");
+				HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+				conn.setRequestMethod("POST");
+				conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+				conn.setDoOutput(true);
+				conn.setDoInput(true);
 
-				@Override
-				public void run() {
-					// TODO Auto-generated method stub
-					AsyncHttpPost("result");
-					from = (EditText) findViewById(R.id.editText_from);
-					to = (EditText) findViewById(R.id.editText_to);
-					from.setText(acc1);
-					to.setText(acc2);
+				String postDataParams = "username=" + URLEncoder.encode(usernameBase64ByteString, "UTF-8") +
+						"&password=" + URLEncoder.encode(passNormalized != null ? passNormalized : "", "UTF-8");
+
+				OutputStream os = conn.getOutputStream();
+				os.write(postDataParams.getBytes("UTF-8"));
+				os.flush();
+				os.close();
+
+				int responseCode = conn.getResponseCode();
+				InputStream in = (responseCode >= 400) ? conn.getErrorStream() : conn.getInputStream();
+				if (in != null) {
+					result = convertStreamToString( in );
+				} else {
+					result = "";
 				}
-			});
-			return str;
+
+				if (result != null) {
+					result = result.replace("\n", "");
+					if (result.indexOf("Correct") != -1) {
+						try {
+							jsonObject = new JSONObject(result);
+							acc1 = jsonObject.getString("from");
+							acc2 = jsonObject.getString("to");
+						} catch (JSONException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+
+				runOnUiThread(new Runnable() {
+
+					@Override
+					public void run() {
+						AsyncHttpPost("result");
+						from = (EditText) findViewById(R.id.editText_from);
+						to = (EditText) findViewById(R.id.editText_to);
+						if (from != null && acc1 != null) from.setText(acc1);
+						if (to != null && acc2 != null) to.setText(acc2);
+					}
+				});
+				return str;
+			} catch (Throwable t) {
+				t.printStackTrace();
+				return null;
+			}
 		}
 
 		/**
@@ -393,24 +403,20 @@ public class DoTransfer extends Activity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-		switch (item.getItemId()) {
-			case android.R.id.home:
-				//Write your logic here
-				this.finish();
-				return true;
-			case R.id.action_settings:
-				callPreferences();
-				return true;
-
-			case R.id.action_exit:
-				Intent i = new Intent(getBaseContext(), LoginActivity.class);
-				i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-				startActivity(i);
-				return true;
-
-			default:
-				return super.onOptionsItemSelected(item);
-		}
+        if (id == android.R.id.home) {
+            this.finish();
+            return true;
+        } else if (id == R.id.action_settings) {
+            callPreferences();
+            return true;
+        } else if (id == R.id.action_exit) {
+            Intent i = new Intent(getBaseContext(), LoginActivity.class);
+            i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(i);
+            return true;
+        } else {
+            return super.onOptionsItemSelected(item);
+        }
 
 	}
 

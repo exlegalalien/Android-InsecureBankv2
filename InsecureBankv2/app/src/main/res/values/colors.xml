@@ -18,5 +18,6 @@
     <color name="shadowBankPrimary">#608DBD</color>
     <color name="hrWhite">#FFFFDA</color>
     <color name="hrShadow">#1c5353</color>
+    <color name="wallet_bright_foreground_holo_dark">#f0f0f0</color>
 
 </resources>

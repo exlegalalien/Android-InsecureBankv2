@@ -1,158 +1,161 @@
 import getopt
-import web
+import json
 import sys
-#from web.wsgiserver import CherryPyWSGIServer
-#from cherrypy import wsgiserver
-from cheroot import wsgi # This replaces the 2 above
-from flask import Flask, request, request_started
-from functools import wraps
-from models import User, Account
+from decimal import Decimal, InvalidOperation
+
+from cheroot import wsgi
+from flask import Flask, request
+
 from database import db_session
-import simplejson as json
-makejson = json.dumps
+from models import Account, User
+
 app = Flask(__name__)
-makejson = json.dumps
 
 DEFAULT_PORT_NO = 8888
 
+
 def usageguide():
-    print "InsecureBankv2 Backend-Server"
-    print "Options: "
-    print "  --port p    serve on port p (default 8888)"
-    print "  --help      print this message"
+    print("InsecureBankv2 Backend-Server")
+    print("Options: ")
+    print("  --port p    serve on port p (default 8888)")
+    print("  --help      print this message")
+
 
 @app.errorhandler(500)
 def internal_servererror(error):
-    print " [!]", error
+    print(" [!]", error)
     return "Internal Server Error", 500
 
-'''
-The function handles the authentication mechanism
-'''
+
 @app.route('/login', methods=['POST'])
 def login():
-    Responsemsg="fail"
+    response_msg = "fail"
     user = request.form['username']
-    #checks for presence of user in the database #requires models.py
-    u = User.query.filter(User.username == request.form["username"]).first()
-    print "u=",u
-    if u and u.password == request.form["password"]:
-	Responsemsg="Correct Credentials"
-    elif u and u.password != request.form["password"]:
-	Responsemsg="Wrong Password"
-    elif not u:
-        Responsemsg="User Does not Exist"
-    else: Responsemsg="Some Error"
-    data = {"message" : Responsemsg, "user": user}
-    print makejson(data)
-    return makejson(data)
+    user_record = User.query.filter(
+        User.username == request.form["username"]
+    ).first()
+    print("u=", user_record)
+    if user_record and user_record.password == request.form["password"]:
+        response_msg = "Correct Credentials"
+    elif user_record and user_record.password != request.form["password"]:
+        response_msg = "Wrong Password"
+    elif not user_record:
+        response_msg = "User Does not Exist"
+    else:
+        response_msg = "Some Error"
+    data = {"message": response_msg, "user": user}
+    print(json.dumps(data))
+    return json.dumps(data)
 
-'''
-The function responds back with the from and to debit accounts corresponding to logged in user
-'''
+
 @app.route('/getaccounts', methods=['POST'])
 def getaccounts():
-    #set accounts from the request 
-    Responsemsg="fail"
-    acc1=acc2=from_acc=to_acc=0
-    user=request.form['username']
-    #checks for presence of user in the database
-    u = User.query.filter(User.username == user).first()
-    if not u or u.password != request.form["password"]:
-        Responsemsg="Wrong Credentials so trx fail"
+    response_msg = "fail"
+    from_acc = to_acc = 0
+    user = request.form['username']
+    user_record = User.query.filter(User.username == user).first()
+    if not user_record or user_record.password != request.form["password"]:
+        response_msg = "Wrong Credentials so trx fail"
     else:
-        Responsemsg="Correct Credentials so get accounts will continue"
-        a=Account.query.filter(Account.user == user)
-        for i in a:
-          if (i.type=='from'):
-	    from_acc=i.account_number;
-        for j in a:
-          if (i.type=='to'):
-	    to_acc=i.account_number;
-    data = {"message" : Responsemsg, "from": from_acc,"to": to_acc}
-    print makejson(data)
-    return makejson(data)
+        response_msg = "Correct Credentials so get accounts will continue"
+        accounts = Account.query.filter(Account.user == user)
+        for account in accounts:
+            if account.type == 'from':
+                from_acc = account.account_number
+            elif account.type == 'to':
+                to_acc = account.account_number
+    data = {"message": response_msg, "from": from_acc, "to": to_acc}
+    print(json.dumps(data))
+    return json.dumps(data)
 
-'''
-The function takes a new password as input and passes it on to the change password module
-'''
+
 @app.route('/changepassword', methods=['POST'])
 def changepassword():
-    #set accounts from the request 
-    Responsemsg="fail"
-    newpassword=request.form['newpassword']
-    user=request.form['username']
-    print newpassword
-    u = User.query.filter(User.username == user).first() #checks for presence of user in the database
-    if not u:
-        Responsemsg="Error"
+    response_msg = "fail"
+    new_password = request.form['newpassword']
+    user = request.form['username']
+    print(new_password)
+    user_record = User.query.filter(User.username == user).first()
+    if not user_record:
+        response_msg = "Error"
     else:
-	Responsemsg="Change Password Successful"
-	u.password = newpassword
+        response_msg = "Change Password Successful"
+        user_record.password = new_password
         db_session.commit()
-    data = {"message" : Responsemsg}
-    print makejson(data)
-    return makejson(data)
-    
-'''
-The function handles the transaction module
-'''
+    data = {"message": response_msg}
+    print(json.dumps(data))
+    return json.dumps(data)
+
+
 @app.route('/dotransfer', methods=['POST'])
 def dotransfer():
-    #set accounts from the request 
-    Responsemsg="fail"
-    user=request.form['username']
-    amount=request.form['amount']
-    #print request.form["from_acc"]
-    u = User.query.filter(User.username == user).first() #checks for presence of user in the database
-    if not u or u.password != request.form["password"]:
-        Responsemsg="Wrong Credentials so trx fail"
-	#print Responsemsg
+    response_msg = "fail"
+    user = request.form['username']
+    amount = request.form['amount']
+    from_acc = to_acc = 0
+    user_record = User.query.filter(User.username == user).first()
+    if not user_record or user_record.password != request.form["password"]:
+        response_msg = "Wrong Credentials so trx fail"
     else:
-	Responsemsg="Success"
-	#print Responsemsg
-	from_acc = request.form["from_acc"]
-	to_acc = request.form["to_acc"]
-	amount = request.form["amount"]
-        from_account = Account.query.filter(Account.account_number == from_acc).first()
-        to_account = Account.query.filter(Account.account_number == to_acc).first()
-	#print "fromacc=",from_account
-        #print "amount===",amount
-        to_account.balance += int(request.form['amount'])
-        from_account.balance -= int(request.form['amount'])
+        from_acc = request.form["from_acc"]
+        to_acc = request.form["to_acc"]
+        try:
+            transfer_amount = Decimal(amount)
+            if (
+                not transfer_amount.is_finite()
+                or transfer_amount <= 0
+                or transfer_amount.quantize(Decimal("0.01")) != transfer_amount
+            ):
+                raise InvalidOperation
+        except InvalidOperation:
+            data = {
+                "message": "Invalid amount",
+                "from": from_acc,
+                "to": to_acc,
+                "amount": amount,
+            }
+            return json.dumps(data), 400
+        from_account = Account.query.filter(
+            Account.account_number == from_acc
+        ).first()
+        to_account = Account.query.filter(
+            Account.account_number == to_acc
+        ).first()
+        to_account.balance += transfer_amount
+        from_account.balance -= transfer_amount
         db_session.commit()
-    data = {"message" : Responsemsg, "from": from_acc, "to": to_acc,  "amount": amount}
-    #print makejson(data)
-    return makejson(data)
+        response_msg = "Success"
+    data = {
+        "message": response_msg,
+        "from": from_acc,
+        "to": to_acc,
+        "amount": amount,
+    }
+    return json.dumps(data)
 
-'''
-The function provides login mechanism to a developer user during development phase
-'''
+
 @app.route('/devlogin', methods=['POST'])
 def devlogin():
-    user=request.form['username']
-    Responsemsg="Correct Credentials"
-    data = {"message" : Responsemsg, "user": user}
-    print makejson(data)
-    return makejson(data)
+    user = request.form['username']
+    data = {"message": "Correct Credentials", "user": user}
+    print(json.dumps(data))
+    return json.dumps(data)
+
 
 if __name__ == '__main__':
     port = DEFAULT_PORT_NO
     options, args = getopt.getopt(sys.argv[1:], "", ["help", "port="])
-    for op, arg1 in options:
-	if op == "--help":
+    for option, argument in options:
+        if option == "--help":
             usageguide()
             sys.exit(2)
-        elif op == "--port":
-            port = int(arg1)
+        elif option == "--port":
+            port = int(argument)
 
-    urls = ("/.*", "app")
-    apps = web.application(urls, globals())
-    server = wsgi.Server(("0.0.0.0", port),app,server_name='localhost')
-    print "The server is hosted on port:",(port)
-    
+    server = wsgi.Server(("0.0.0.0", port), app, server_name='localhost')
+    print("The server is hosted on port:", port)
+
     try:
         server.start()
-	#apps.run(port)
     except KeyboardInterrupt:
         server.stop()

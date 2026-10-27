@@ -1,23 +1,21 @@
 package com.android.insecurebankv2;
 
+import static com.marcohc.toasteroid.Toasteroid.*;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Environment;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
-import android.widget.Toast;
-
-import com.marcohc.toasteroid.Toasteroid;
 
 import java.io.File;
 
-/*
-The page that allows the user to view transaction history for the logged in user
-@author Dinesh Shetty
-*/
+/**
+ * The page that allows the user to view transaction history for the logged-in user
+ * @author Dinesh Shetty
+ */
 public class ViewStatement extends Activity {
 	String uname;
 	@Override
@@ -28,30 +26,38 @@ public class ViewStatement extends Activity {
 		uname = intent.getStringExtra("uname");
 		//String statementLocation=Environment.getExternalStorageDirectory()+ "/Statements_" + uname + ".html";
 		String FILENAME="Statements_" + uname + ".html";
-		File fileToCheck = new File(Environment.getExternalStorageDirectory(), FILENAME);
-		System.out.println(fileToCheck.toString());
+		File fileToCheck = new File(getExternalFilesDir(null), FILENAME);
+		System.out.println("Checking for file:" + fileToCheck.getAbsolutePath());
 		if (fileToCheck.exists()) {
-			//Toast.makeText(this, "Statement Exists!!",Toast.LENGTH_LONG).show();
+			show(this, "Statement Exists!!", STYLES.WARNING, LENGTH_SHORT);
 
-			WebView mWebView = (WebView) findViewById(R.id.webView1);
-			//   Location where the statements are stored locally on the device sdcard
-			mWebView.loadUrl("file://" + Environment.getExternalStorageDirectory() + "/Statements_" + uname + ".html");
+			WebView mWebView = findViewById(R.id.webView1);
 			mWebView.getSettings().setJavaScriptEnabled(true);
-			mWebView.getSettings().setSaveFormData(true);
+			mWebView.getSettings().setDomStorageEnabled(true);
 			mWebView.getSettings().setBuiltInZoomControls(true);
 			mWebView.setWebViewClient(new MyWebViewClient());
 			WebChromeClient cClient = new WebChromeClient();
 			mWebView.setWebChromeClient(cClient);
+			
+			try {
+				java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(fileToCheck));
+				StringBuilder sb = new StringBuilder();
+				String line;
+				while ((line = br.readLine()) != null) {
+					sb.append(line).append("\n");
+				}
+				br.close();
+				mWebView.loadDataWithBaseURL("file://" + fileToCheck.getAbsolutePath(), sb.toString(), "text/html", "UTF-8", null);
+			} catch (Exception e) {
+				show(this, "Error reading statement!!", STYLES.WARNING, LENGTH_SHORT);
+				System.out.println("Error reading statement: " + e.getLocalizedMessage());
+			}
 		} else
 		{
 			Intent gobacktoPostLogin =new Intent(this,PostLogin.class);
 			startActivity(gobacktoPostLogin);
-			Toasteroid.show(this, "Statement does not Exist!!", Toasteroid.STYLES.WARNING, Toasteroid.LENGTH_SHORT);
-
+			show(this, "Statement does not Exist!!", STYLES.WARNING, LENGTH_SHORT);
 		}
-
-
-
 	}
 	// Added for handling menu operations
 	@Override
