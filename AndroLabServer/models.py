@@ -2,7 +2,7 @@ import os
 import base64
 
 #from datetime import datetime
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, Numeric, String
 from database import Base, db_session
 #import settings
 
@@ -35,7 +35,7 @@ class Account(Base):
     id = Column(Integer, primary_key=True) 
     account_number = Column(Integer, unique=True)
     type = Column(String(50))
-    balance = Column(Integer)
+    balance = Column(Numeric(12, 2), nullable=False, default=0)
     user_id = Column(Integer)
     user = Column(String(50))
 
@@ -54,4 +54,3 @@ class Account(Base):
                 "type" : self.type,
                 "balance" : self.balance,
                 }    
-

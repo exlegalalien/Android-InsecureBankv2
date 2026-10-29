@@ -4,7 +4,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -66,7 +70,6 @@ public class DoLogin extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_do_login);
-		finish();
 
         // Get Server details from Shared Preference file.
 		serverDetails = PreferenceManager.getDefaultSharedPreferences(this);
@@ -75,8 +78,10 @@ public class DoLogin extends Activity {
         if(serverip!=null && serverport!=null){
 
 		Intent data = getIntent();
-		username = data.getStringExtra("passed_username");
-		password = data.getStringExtra("passed_password");
+		if (data != null) {
+			username = data.getStringExtra("passed_username");
+			password = data.getStringExtra("passed_password");
+		}
 		new RequestTask().execute("username");
 
         }
@@ -96,61 +101,51 @@ public class DoLogin extends Activity {
 		protected String doInBackground(String...params) {
 			try {
 				postData(params[0]);
-			} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException | IOException | JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			} catch (Throwable t) {
+				t.printStackTrace();
 			}
 
 			return null;
 		}
 
-		protected void onPostExecute(Double result) {}
-		protected void onProgressUpdate(Integer...progress) {}
+		protected void onPostExecute(String result) {}
+		protected void onProgressUpdate(String...progress) {}
 
-		public void postData(String valueIWantToSend) throws ClientProtocolException, IOException, JSONException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException {
-
-
-
-			// Create a new HttpClient and Post Header
-
-			HttpClient httpclient = new DefaultHttpClient();
-			HttpPost httppost = new HttpPost(protocol + serverip + ":" + serverport + "/login");
-			HttpPost httppost2 = new HttpPost(protocol + serverip + ":" + serverport + "/devlogin");
-
-			// Add your data
-			List < NameValuePair > nameValuePairs = new ArrayList < NameValuePair > (2);
-
-			//                Delete below test accounts in production
-			//                nameValuePairs.add(new BasicNameValuePair("username", "jack"));
-			//                nameValuePairs.add(new BasicNameValuePair("password", "jack@123$"));
-
-			nameValuePairs.add(new BasicNameValuePair("username", username));
-			nameValuePairs.add(new BasicNameValuePair("password", password));
-			HttpResponse responseBody;
-			if (username.equals("devadmin")) {
-				httppost2.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-				// Execute HTTP Post Request
-				responseBody = httpclient.execute(httppost2);
-			} else {
-				httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-				// Execute HTTP Post Request
-				responseBody = httpclient.execute(httppost);
+		public void postData(String valueIWantToSend) throws Exception {
+			if (username == null || password == null) {
+				return;
 			}
+			URL url = new URL(protocol + serverip + ":" + serverport + (username.equals("devadmin") ? "/devlogin" : "/login"));
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("POST");
+			conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+			conn.setDoOutput(true);
+			conn.setDoInput(true);
 
-			InputStream in = responseBody.getEntity().getContent();
-			result = convertStreamToString( in );
-			result = result.replace("\n", "");
-			if (result != null) {
-				if (result.indexOf("Correct Credentials") != -1) {
-					Log.d("Successful Login:", ", account=" + username + ":" + password);
-					saveCreds(username, password);
-					trackUserLogins();
-					Intent pL = new Intent(getApplicationContext(), PostLogin.class);
-					pL.putExtra("uname", username);
-					startActivity(pL);
-				} else {
-					Intent xi = new Intent(getApplicationContext(), WrongLogin.class);
-					startActivity(xi);
+			String postDataParams = "username=" + URLEncoder.encode(username, "UTF-8") +
+					"&password=" + URLEncoder.encode(password, "UTF-8");
+			OutputStream os = conn.getOutputStream();
+			os.write(postDataParams.getBytes("UTF-8"));
+			os.flush();
+			os.close();
+
+			int responseCode = conn.getResponseCode();
+			InputStream in = (responseCode >= 400) ? conn.getErrorStream() : conn.getInputStream();
+			if (in != null) {
+				result = convertStreamToString( in );
+				if (result != null) {
+					result = result.replace("\n", "");
+					if (result.indexOf("Correct Credentials") != -1) {
+						Log.d("Successful Login:", ", account=" + username + ":" + password);
+						saveCreds(username, password);
+						trackUserLogins();
+						Intent pL = new Intent(getApplicationContext(), PostLogin.class);
+						pL.putExtra("uname", username);
+						startActivity(pL);
+					} else {
+						Intent xi = new Intent(getApplicationContext(), WrongLogin.class);
+						startActivity(xi);
+					}
 				}
 			}
 		}

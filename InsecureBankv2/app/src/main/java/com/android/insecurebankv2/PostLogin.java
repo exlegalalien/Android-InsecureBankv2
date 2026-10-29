@@ -2,8 +2,13 @@ package com.android.insecurebankv2;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.Settings;
+import android.util.Base64;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -44,7 +49,34 @@ public class PostLogin extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_post_login);
 		Intent intent = getIntent();
-		uname = intent.getStringExtra("uname");
+		if (intent != null && intent.hasExtra("uname") && intent.getStringExtra("uname") != null) {
+			uname = intent.getStringExtra("uname");
+		}
+		if (uname == null || uname.isEmpty()) {
+			SharedPreferences settings = getSharedPreferences("mySharedPreferences", Activity.MODE_PRIVATE);
+			String encryptedUsername = settings.getString("EncryptedUsername", null);
+			if (encryptedUsername != null) {
+				try {
+					byte[] data = Base64.decode(encryptedUsername, Base64.DEFAULT);
+					uname = new String(data, "UTF-8");
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+			if (!Environment.isExternalStorageManager()) {
+				try {
+					Intent permissionIntent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+					permissionIntent.setData(Uri.parse("package:" + getPackageName()));
+					startActivity(permissionIntent);
+				} catch (Exception e) {
+					Intent permissionIntent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+					startActivity(permissionIntent);
+				}
+			}
+		}
 
         root_status =(TextView) findViewById(R.id.rootStatus);
         //  Display root status

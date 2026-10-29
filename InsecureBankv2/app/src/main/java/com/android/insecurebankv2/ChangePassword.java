@@ -4,7 +4,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -99,24 +103,29 @@ public class ChangePassword extends Activity {
 		});
 	}
 	class RequestChangePasswordTask extends AsyncTask < String, String, String > {
+		String newPasswordStr;
+
+		@Override
+		protected void onPreExecute() {
+			super.onPreExecute();
+			newPasswordStr = changePassword_text != null && changePassword_text.getText() != null ? changePassword_text.getText().toString() : "";
+		}
 
 		@Override
 		protected String doInBackground(String...params) {
-
 			try {
 				postData(params[0]);
-			} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException | IOException | JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			} catch (Throwable t) {
+				t.printStackTrace();
 			}
 
 			return null;
 		}
 
-		protected void onPostExecute(Double result) {
+		protected void onPostExecute(String result) {
 
 		}
-		protected void onProgressUpdate(Integer...progress) {
+		protected void onProgressUpdate(String...progress) {
 
 		}
 
@@ -124,30 +133,39 @@ public class ChangePassword extends Activity {
 		The function that makes an HTTP Post to the server endpoint that handles the 
 		change password operation.
 		*/
-		public void postData(String valueIWantToSend) throws ClientProtocolException, IOException, JSONException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException {
-			HttpClient httpclient = new DefaultHttpClient();
-			HttpPost httppost = new HttpPost(protocol + serverip + ":" + serverport + "/changepassword");
-			List < NameValuePair > nameValuePairs = new ArrayList < NameValuePair > (2);
-
-			/*
-			   Delete below test accounts once the application goes into production phase.
-			   nameValuePairs.add(new BasicNameValuePair("username", "jack"));
-			   nameValuePairs.add(new BasicNameValuePair("password", "Jack@123$"));
-			 */
-			nameValuePairs.add(new BasicNameValuePair("username", uname));
-			nameValuePairs.add(new BasicNameValuePair("newpassword", changePassword_text.getText().toString()));
-			HttpResponse responseBody;
-			httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+		public void postData(String valueIWantToSend) throws Exception {
 			pattern = Pattern.compile(PASSWORD_PATTERN);
-			matcher = pattern.matcher(changePassword_text.getText().toString());
+			matcher = pattern.matcher(newPasswordStr);
 
 			// Check if the password is complex enough
 			boolean isStrong= matcher.matches();
 			if (isStrong){
-				responseBody = httpclient.execute(httppost);
-				InputStream in = responseBody.getEntity().getContent();
-				result = convertStreamToString( in );
-				result = result.replace("\n", "");
+				try {
+					URL url = new URL(protocol + serverip + ":" + serverport + "/changepassword");
+					HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+					conn.setRequestMethod("POST");
+					conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+					conn.setDoOutput(true);
+					conn.setDoInput(true);
+
+					String postDataParams = "username=" + URLEncoder.encode(uname, "UTF-8") +
+							"&newpassword=" + URLEncoder.encode(newPasswordStr, "UTF-8");
+					OutputStream os = conn.getOutputStream();
+					os.write(postDataParams.getBytes("UTF-8"));
+					os.flush();
+					os.close();
+
+					int responseCode = conn.getResponseCode();
+					InputStream in = (responseCode >= 400) ? conn.getErrorStream() : conn.getInputStream();
+					if (in != null) {
+						result = convertStreamToString( in );
+						if (result != null) {
+							result = result.replace("\n", "");
+						}
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 
 				runOnUiThread(new Runnable() {
 					@Override
@@ -161,7 +179,7 @@ public class ChangePassword extends Activity {
 									String login_response_message = jsonObject.getString("message");
 									Toast.makeText(getApplicationContext(), login_response_message + ". Restart application to Continue.", Toast.LENGTH_LONG).show();
                                     TelephonyManager phoneManager = (TelephonyManager)getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
-                                    String phoneNumber = phoneManager.getLine1Number();
+                                    String phoneNumber = phoneManager != null ? phoneManager.getLine1Number() : null;
                                     System.out.println("phonno:"+phoneNumber);
 
                                     /*
@@ -169,11 +187,10 @@ public class ChangePassword extends Activity {
                                     phoneNumber: Phone number to which the confirmation SMS is to be sent
                                     */
 
-                                    broadcastChangepasswordSMS(phoneNumber, changePassword_text.getText().toString());
+                                    broadcastChangepasswordSMS(phoneNumber, newPasswordStr);
 
 
                                 } catch (JSONException e) {
-									// TODO Auto-generated catch block
 									e.printStackTrace();
 								}
 							}
@@ -213,7 +230,7 @@ public class ChangePassword extends Activity {
 
     private void broadcastChangepasswordSMS(String phoneNumber, String pass) {
 
-        if(TextUtils.isEmpty(phoneNumber.toString().trim())) {
+        if(phoneNumber == null || TextUtils.isEmpty(phoneNumber.trim())) {
 
             System.out.println("Phone number Invalid.");
         }
