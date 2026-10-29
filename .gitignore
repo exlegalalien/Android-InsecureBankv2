@@ -130,7 +130,7 @@ captures/
 .idea/deploymentTargetSelector.xml
 .idea/deviceManager.xml
 .idea/jarRepositories.xml
-.idea/caches
+.idea/caches/
 
 # VSCode
 .vscode
