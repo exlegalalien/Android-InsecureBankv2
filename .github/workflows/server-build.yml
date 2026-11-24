@@ -1,0 +1,50 @@
+name: Build Server (AndroLabServer)
+
+on:
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'AndroLabServer/**'
+      - '.github/workflows/server-build.yml'
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'AndroLabServer/**'
+  workflow_dispatch:
+
+jobs:
+  build-server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: AndroLabServer
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.15'
+          cache: 'pip'
+          cache-dependency-path: 'AndroLabServer/requirements.txt'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Verify Python syntax (compile check)
+        run: python -m compileall -q .
+
+      - name: Smoke test server startup
+        run: |
+          python app.py --port 8888 &
+          SERVER_PID=$!
+          sleep 3
+          if ! kill -0 $SERVER_PID 2>/dev/null; then
+            echo "Server failed to start or exited prematurely."
+            exit 1
+          fi
+          kill $SERVER_PID
