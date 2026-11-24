@@ -58,7 +58,7 @@ jobs:
           name: InsecureBankv2-debug-apk
           path: apk-artifact
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id || inputs.build_run_id }}
+          run-id: ${{ steps.resolve-run.outputs.run_id }}
 
       - name: Prepare APK for zScan
         run: |
