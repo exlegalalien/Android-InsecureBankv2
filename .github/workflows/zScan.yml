@@ -28,6 +28,30 @@ jobs:
       actions: read           # required to download artifacts from another workflow run
 
     steps:
+      - name: Resolve Build Android run ID
+        id: resolve-run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id || inputs.build_run_id }}"
+          if [ -z "$RUN_ID" ]; then
+            RUN_ID=$(gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow "android-build.yml" \
+              --status success \
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId')
+          fi
+
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "Error: Could not find a successful run of 'Build Android (InsecureBankv2)'."
+            exit 1
+          fi
+
+          echo "Using Build Android run ID: $RUN_ID"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
       - name: Download APK from Build Android workflow
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # 8.0.2
         with:
