@@ -11,28 +11,25 @@ public class MyReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        // TODO Auto-generated method stub
-
         String phn = intent.getStringExtra("phonenumber");
         String newpass = intent.getStringExtra("newpass");
 
         if (phn != null) {
             try {
                 Intent bintent = new Intent(context, MainActivity.class);
+                bintent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 bintent.putExtra("phonenumber", phn);
-                bintent.putExtra("newpass",newpass);
+                bintent.putExtra("newpass", newpass);
                 context.startActivity(bintent);
 
-                System.out.println("Phonenumber:"+phn);
-                System.out.println("newpass:"+newpass);
+                System.out.println("Phonenumber:" + phn);
+                System.out.println("newpass:" + newpass);
 
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }
-        else {
+        } else {
             System.out.println("Phone number is null");
         }
     }
-
 }
