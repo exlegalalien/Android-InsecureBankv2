@@ -120,22 +120,9 @@ proguard/
 # Android Studio captures folder
 captures/
 
-# Intellij
+# Intellij/Android Studio
 *.iml
-# Ignore everything in .idea by default
-.idea/*
-InsecureBankv2/.idea/*
-
-# Keep shared team configurations
-!.idea/codeStyles/
-!.idea/inspectionProfiles/
-!.idea/runConfigurations/
-!.idea/dictionaries/
-!InsecureBankv2/.idea/codeStyles/
-!InsecureBankv2/.idea/inspectionProfiles/
-!InsecureBankv2/.idea/runConfigurations/
-!InsecureBankv2/.idea/dictionaries/
-
+.idea/
 
 # VSCode
 .vscode
