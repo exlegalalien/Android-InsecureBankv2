@@ -1,0 +1,49 @@
+name: Build Android (InsecureBankv2)
+
+on:
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'InsecureBankv2/**'
+      - '.github/workflows/android-build.yml'
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'InsecureBankv2/**'
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: InsecureBankv2
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@910b061d4d71ad2d7a2a777230a98a00638d34e0 # 6.4.1
+        with:
+          validate-wrappers: false
+          cache-provider: basic
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --max-workers=2 --no-daemon
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
+        with:
+          name: InsecureBankv2-debug-apk
+          path: InsecureBankv2/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

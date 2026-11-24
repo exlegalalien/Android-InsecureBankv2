@@ -1,28 +1,16 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-#
-# The zimperium-zscan GitHub action scans your mobile app binary (iOS or Android)
-# and identifies security, privacy, and compliance-related vulnerabilities. ​
-#
-# Prerequisites:
-#  * An active Zimperium zScan account is required. If you are not an existing Zimperium
-#    zScan customer, please request a zSCAN demo by visiting https://www.zimperium.com/contact-us.
-#  * Either GitHub Advanced Security (GHAS) or a public repository is required to display
-#    issues and view the remediation information inside of GitHub code scanning alerts.​
-#
-# For additional information and setup instructions
-# please visit:  https://github.com/Zimperium/zScanMarketplace#readme
-
 name: "Zimperium zScan"
 
 on:
+  workflow_run:
+    workflows: ["Build Android (InsecureBankv2)"]
+    types:
+      - completed
   workflow_dispatch:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+    inputs:
+      build_run_id:
+        description: "Workflow run ID of 'Build Android (InsecureBankv2)' (leave blank to use latest)"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -31,35 +19,71 @@ jobs:
   zscan:
     name: zScan
     runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     permissions:
       contents: read          # for actions/checkout to fetch code
       security-events: write  # for github/codeql-action/upload-sarif to upload SARIF results
-      actions: read           # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      actions: read           # required to download artifacts from another workflow run
 
-      # - name: Execute gradle build
-      #  run: echo "./gradlew build"
-  
-      - name: Make more apks
-        run: cp InsecureBankv2.apk InsecureBankv2-2.apk
-      
+    steps:
+      - name: Resolve Build Android run ID
+        id: resolve-run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id || inputs.build_run_id }}"
+          if [ -z "$RUN_ID" ]; then
+            RUN_ID=$(gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow "android-build.yml" \
+              --status success \
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId')
+          fi
+
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "Error: Could not find a successful run of 'Build Android (InsecureBankv2)'."
+            exit 1
+          fi
+
+          echo "Using Build Android run ID: $RUN_ID"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Download APK from Build Android workflow
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # 8.0.2
+        with:
+          name: InsecureBankv2-debug-apk
+          path: apk-artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ steps.resolve-run.outputs.run_id }}
+
+      - name: Prepare APK for zScan
+        run: |
+          APK_PATH=$(find apk-artifact -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK found in downloaded artifact."
+            exit 1
+          fi
+          cp "$APK_PATH" ./InsecureBankv2.apk
+          ls -lh ./InsecureBankv2.apk
+
       - name: Run Zimperium zScan
-        uses: zimperium/zscanmarketplace@38c7ec55133604d52b38d61244c8a22ec3271e49
+        uses: zimperium/zscanmarketplace@8c1dff6166b6e25c59520480a766985f5eef3f8a # v1.6
         timeout-minutes: 60
         with:
-
-        # REPLACE: Zimperium Client Environment Name
           console_url: https://zc202.zimperium.com
-        # REPLACE: Zimperium Client ID
           client_id: ${{ vars.ZSCAN_CLIENT_ID }}
-        # REPLACE: Zimperium Client Secret
           client_secret: ${{ secrets.ZSCAN_CLIENT_SECRET }}
-        # REPLACE: The path to an .ipa or .apk
-          app_file: "*.apk"
+          app_file: "InsecureBankv2.apk"
 
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v4
-        with:  
+        uses: github/codeql-action/upload-sarif@2c6d525faa37685eb8a677b041e49725dd8d44cb # v4.39.5
+        with:
           sarif_file: InsecureBankv2_zscan.sarif
+          # Ensure SARIF results attach to the PR commit/branch when triggered via workflow_run
+          sha: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.event.workflow_run.head_branch && format('refs/heads/{0}', github.event.workflow_run.head_branch) || github.ref }}
+
