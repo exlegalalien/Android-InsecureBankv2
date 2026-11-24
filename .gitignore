@@ -120,17 +120,9 @@ proguard/
 # Android Studio captures folder
 captures/
 
-# Intellij
+# Intellij/Android Studio
 *.iml
-.idea/workspace.xml
-.idea/misc.xml
-.idea/modules.xml
-.idea/AndroidProjectSystem.xml
-.idea/compiler.xml
-.idea/deploymentTargetSelector.xml
-.idea/deviceManager.xml
-.idea/jarRepositories.xml
-.idea/caches/
+.idea/
 
 # VSCode
 .vscode

@@ -8,10 +8,10 @@ android {
 
     defaultConfig {
         applicationId "com.android.insecurebankv2"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode 3
-        versionName "3.0"
+        versionName "3.1"
         useLibrary 'org.apache.http.legacy'
     }
 
