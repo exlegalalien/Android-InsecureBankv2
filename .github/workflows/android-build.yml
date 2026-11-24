@@ -23,12 +23,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: 'temurin'
-          # Use '8' or '11' if your fork still targets an older Android Gradle Plugin (AGP < 7.0)
-          java-version: '17'
+          java-version: '21'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@910b061d4d71ad2d7a2a777230a98a00638d34e0 # 6.4.1
