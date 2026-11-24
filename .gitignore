@@ -122,15 +122,20 @@ captures/
 
 # Intellij
 *.iml
-.idea/workspace.xml
-.idea/misc.xml
-.idea/modules.xml
-.idea/AndroidProjectSystem.xml
-.idea/compiler.xml
-.idea/deploymentTargetSelector.xml
-.idea/deviceManager.xml
-.idea/jarRepositories.xml
-.idea/caches/
+# Ignore everything in .idea by default
+.idea/*
+InsecureBankv2/.idea/*
+
+# Keep shared team configurations
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+!.idea/runConfigurations/
+!.idea/dictionaries/
+!InsecureBankv2/.idea/codeStyles/
+!InsecureBankv2/.idea/inspectionProfiles/
+!InsecureBankv2/.idea/runConfigurations/
+!InsecureBankv2/.idea/dictionaries/
+
 
 # VSCode
 .vscode
